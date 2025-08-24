@@ -42,16 +42,70 @@ export default function NewPatientPage() {
     setLoading(true)
 
     try {
-      // Mock API call
-      await new Promise((resolve) => setTimeout(resolve, 1500))
+      const patientData = {
+        general: {
+          firstName: formData.firstName,
+          lastName: formData.lastName,
+          birthDate: formData.birthDate,
+          phone: formData.phone,
+          primaryPhysician: formData.primaryPhysician,
+          specialists: formData.specialists
+            .split(",")
+            .map((s) => s.trim())
+            .filter((s) => s),
+        },
+        medical: {
+          chronicConditions: formData.chronicConditions
+            .split(",")
+            .map((s) => s.trim())
+            .filter((s) => s),
+          allergies: formData.allergies
+            .split(",")
+            .map((s) => s.trim())
+            .filter((s) => s),
+          familyHistory: formData.familyHistory
+            .split(",")
+            .map((s) => s.trim())
+            .filter((s) => s),
+        },
+      }
 
-      // In real app, this would call the API
-      console.log("Creating patient:", formData)
+      console.log("[v0] Submitting patient data:", patientData)
 
-      // Redirect to patients list
-      router.push("/patients")
+      const controller = new AbortController()
+      const timeoutId = setTimeout(() => controller.abort(), 15000) // 15 second timeout
+
+      const response = await fetch("/api/patients", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(patientData),
+        signal: controller.signal,
+      })
+
+      clearTimeout(timeoutId)
+
+      if (!response.ok) {
+        const error = await response.json()
+        throw new Error(error.error || "Failed to create patient")
+      }
+
+      const newPatient = await response.json()
+      console.log("[v0] Patient created successfully:", newPatient)
+
+      router.replace("/patients")
     } catch (error) {
-      console.error("Error creating patient:", error)
+      if (error.name === "AbortError") {
+        alert(
+          language === "ar"
+            ? "انتهت مهلة الطلب - يرجى المحاولة مرة أخرى"
+            : "Délai d'attente dépassé - veuillez réessayer",
+        )
+      } else {
+        console.error("[v0] Error creating patient:", error)
+        alert(language === "ar" ? "خطأ في إنشاء المريض" : "Erreur lors de la création du patient")
+      }
     } finally {
       setLoading(false)
     }
@@ -126,6 +180,7 @@ export default function NewPatientPage() {
                         type="tel"
                         value={formData.phone}
                         onChange={(e) => handleInputChange("phone", e.target.value)}
+                        className="font-arabic"
                         required
                       />
                     </div>
@@ -180,6 +235,7 @@ export default function NewPatientPage() {
                       onChange={(e) => handleInputChange("chronicConditions", e.target.value)}
                       className="font-arabic"
                       rows={3}
+                      placeholder={language === "ar" ? "مفصولة بفاصلة" : "Séparées par des virgules"}
                     />
                   </div>
 
@@ -193,6 +249,7 @@ export default function NewPatientPage() {
                       onChange={(e) => handleInputChange("allergies", e.target.value)}
                       className="font-arabic"
                       rows={3}
+                      placeholder={language === "ar" ? "مفصولة بفاصلة" : "Séparées par des virgules"}
                     />
                   </div>
 
@@ -206,6 +263,7 @@ export default function NewPatientPage() {
                       onChange={(e) => handleInputChange("familyHistory", e.target.value)}
                       className="font-arabic"
                       rows={3}
+                      placeholder={language === "ar" ? "مفصولة بفاصلة" : "Séparées par des virgules"}
                     />
                   </div>
                 </CardContent>

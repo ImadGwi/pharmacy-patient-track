@@ -20,13 +20,28 @@ export default function PatientsPage() {
   useEffect(() => {
     const fetchPatients = async () => {
       try {
-        const response = await fetch("/api/patients")
+        console.log("[v0] Fetching patients...")
+        const controller = new AbortController()
+        const timeoutId = setTimeout(() => controller.abort(), 10000) // 10 second timeout
+
+        const response = await fetch("/api/patients", {
+          signal: controller.signal,
+        })
+        clearTimeout(timeoutId)
+
         if (response.ok) {
           const data = await response.json()
+          console.log("[v0] Patients fetched successfully:", data.length)
           setPatients(data)
+        } else {
+          console.error("[v0] Failed to fetch patients:", response.status)
         }
       } catch (error) {
-        console.error("Error fetching patients:", error)
+        if (error.name === "AbortError") {
+          console.error("[v0] Request timeout - patients fetch took too long")
+        } else {
+          console.error("[v0] Error fetching patients:", error)
+        }
       } finally {
         setLoading(false)
       }
@@ -35,9 +50,10 @@ export default function PatientsPage() {
     fetchPatients()
   }, [])
 
-  const filteredPatients = patients.filter(
-    (patient) => patient.name.includes(searchQuery) || patient.phone.includes(searchQuery),
-  )
+  const filteredPatients = patients.filter((patient) => {
+    const query = searchQuery.toLowerCase()
+    return patient.name?.toLowerCase().includes(query) || patient.phone?.toLowerCase().includes(query)
+  })
 
   return (
     <AuthGuard>

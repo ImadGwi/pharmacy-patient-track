@@ -13,56 +13,32 @@ export default function VisitDetailsPage() {
   const params = useParams()
   const [visit, setVisit] = useState(null)
   const [loading, setLoading] = useState(true)
+  const [error, setError] = useState(null)
 
   useEffect(() => {
-    // Mock visit data
-    const mockVisit = {
-      visitId: params.visitId,
-      at: "2024-01-15T10:30:00Z",
-      doctorId: "D-001",
-      doctorName: "د. محمد أحمد",
-      questionnaire: {
-        lastGPVisit: "2024-01-10",
-        lastSpecialistVisit: "2024-01-05",
-        lastLabTests: {
-          date: "2024-01-08",
-          notes: "فحص السكر والضغط - النتائج ضمن المعدل الطبيعي",
-        },
-        nextAppointment: "2024-02-15",
-        treatment: {
-          medications: [
-            { name: "ميتفورمين", dose: "500 مج مرتين يومياً" },
-            { name: "أملوديبين", dose: "5 مج مرة واحدة يومياً" },
-          ],
-          duration: "3 أشهر",
-          adherence: "good",
-          organization: ["pillbox", "alarm"],
-          sideEffects: "لا توجد آثار جانبية",
-        },
-        lifestyle: {
-          dietRecommended: true,
-          exercise: true,
-          smoking: "none",
-          alcohol: "none",
-        },
-        evaluation: {
-          diseaseKnowledge: "good",
-          treatmentUnderstanding: "good",
-          selfManagement: "autonomous",
-        },
-        pharmacistNotes:
-          "المريض يتابع العلاج بانتظام ويظهر تحسناً في مستويات السكر. ينصح بالاستمرار على النظام الغذائي والرياضة.",
-      },
-      additionalInfo: {
-        freeText: "المريض سأل عن إمكانية تقليل جرعة الأنسولين",
-      },
+    async function fetchVisit() {
+      try {
+        const response = await fetch(`/api/patients/${params.id}`)
+        if (!response.ok) {
+          throw new Error("Patient not found")
+        }
+        const patientData = await response.json()
+        const visitData = patientData.visits?.find((v) => v.visitId === params.visitId)
+
+        if (!visitData) {
+          throw new Error("Visit not found")
+        }
+
+        setVisit(visitData)
+      } catch (err) {
+        setError(err.message)
+      } finally {
+        setLoading(false)
+      }
     }
 
-    setTimeout(() => {
-      setVisit(mockVisit)
-      setLoading(false)
-    }, 1000)
-  }, [params.visitId])
+    fetchVisit()
+  }, [params.id, params.visitId])
 
   if (loading) {
     return (
@@ -84,7 +60,7 @@ export default function VisitDetailsPage() {
     )
   }
 
-  if (!visit) {
+  if (error || !visit) {
     return (
       <div className="flex min-h-screen bg-background" dir="rtl">
         <Sidebar />
@@ -92,7 +68,7 @@ export default function VisitDetailsPage() {
           <Header title="تفاصيل الزيارة" titleEn="Visit Details" />
           <main className="p-6">
             <div className="text-center py-12">
-              <p className="text-muted-foreground font-arabic">الزيارة غير موجودة</p>
+              <p className="text-muted-foreground font-arabic">{error || "الزيارة غير موجودة"}</p>
             </div>
           </main>
         </div>
@@ -164,10 +140,12 @@ export default function VisitDetailsPage() {
                       {new Date(visit.at).toLocaleTimeString("ar-SA", { hour: "2-digit", minute: "2-digit" })}
                     </span>
                   </div>
-                  <div className="flex items-center gap-2">
-                    <User className="h-4 w-4" />
-                    <span className="font-arabic">{visit.doctorName}</span>
-                  </div>
+                  {visit.doctorName && (
+                    <div className="flex items-center gap-2">
+                      <User className="h-4 w-4" />
+                      <span className="font-arabic">{visit.doctorName}</span>
+                    </div>
+                  )}
                 </div>
               </div>
             </div>
@@ -182,21 +160,21 @@ export default function VisitDetailsPage() {
                   </CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-4">
-                  {visit.questionnaire.lastGPVisit && (
+                  {visit.questionnaire?.lastGPVisit && (
                     <div>
                       <span className="font-arabic font-medium">آخر زيارة للطبيب العام:</span>
                       <p className="text-muted-foreground">{visit.questionnaire.lastGPVisit}</p>
                     </div>
                   )}
 
-                  {visit.questionnaire.lastSpecialistVisit && (
+                  {visit.questionnaire?.lastSpecialistVisit && (
                     <div>
                       <span className="font-arabic font-medium">آخر زيارة للمختص:</span>
                       <p className="text-muted-foreground">{visit.questionnaire.lastSpecialistVisit}</p>
                     </div>
                   )}
 
-                  {visit.questionnaire.lastLabTests.date && (
+                  {visit.questionnaire?.lastLabTests?.date && (
                     <div>
                       <span className="font-arabic font-medium">آخر فحوصات:</span>
                       <p className="text-muted-foreground">{visit.questionnaire.lastLabTests.date}</p>
@@ -208,7 +186,7 @@ export default function VisitDetailsPage() {
                     </div>
                   )}
 
-                  {visit.questionnaire.nextAppointment && (
+                  {visit.questionnaire?.nextAppointment && (
                     <div>
                       <span className="font-arabic font-medium">الموعد القادم:</span>
                       <p className="text-muted-foreground">{visit.questionnaire.nextAppointment}</p>
@@ -226,26 +204,29 @@ export default function VisitDetailsPage() {
                   </CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-4">
-                  <div>
-                    <span className="font-arabic font-medium">الأدوية:</span>
-                    <div className="mt-2 space-y-2">
-                      {visit.questionnaire.treatment.medications.map((med, index) => (
-                        <div key={index} className="flex items-center justify-between p-2 bg-muted rounded">
-                          <span className="font-arabic font-medium">{med.name}</span>
-                          <span className="text-sm text-muted-foreground font-arabic">{med.dose}</span>
+                  {visit.questionnaire?.treatment?.medications &&
+                    visit.questionnaire.treatment.medications.length > 0 && (
+                      <div>
+                        <span className="font-arabic font-medium">الأدوية:</span>
+                        <div className="mt-2 space-y-2">
+                          {visit.questionnaire.treatment.medications.map((med, index) => (
+                            <div key={index} className="flex items-center justify-between p-2 bg-muted rounded">
+                              <span className="font-arabic font-medium">{med.name}</span>
+                              <span className="text-sm text-muted-foreground font-arabic">{med.dose}</span>
+                            </div>
+                          ))}
                         </div>
-                      ))}
-                    </div>
-                  </div>
+                      </div>
+                    )}
 
-                  {visit.questionnaire.treatment.duration && (
+                  {visit.questionnaire?.treatment?.duration && (
                     <div>
                       <span className="font-arabic font-medium">مدة العلاج:</span>
                       <p className="text-muted-foreground font-arabic">{visit.questionnaire.treatment.duration}</p>
                     </div>
                   )}
 
-                  {visit.questionnaire.treatment.adherence && (
+                  {visit.questionnaire?.treatment?.adherence && (
                     <div>
                       <span className="font-arabic font-medium">الالتزام:</span>
                       <Badge variant="secondary" className="mr-2 font-arabic">
@@ -254,20 +235,21 @@ export default function VisitDetailsPage() {
                     </div>
                   )}
 
-                  {visit.questionnaire.treatment.organization.length > 0 && (
-                    <div>
-                      <span className="font-arabic font-medium">التنظيم:</span>
-                      <div className="mt-1 space-x-1 space-x-reverse">
-                        {visit.questionnaire.treatment.organization.map((org, index) => (
-                          <Badge key={index} variant="outline" className="font-arabic">
-                            {getOrganizationLabel(org)}
-                          </Badge>
-                        ))}
+                  {visit.questionnaire?.treatment?.organization &&
+                    visit.questionnaire.treatment.organization.length > 0 && (
+                      <div>
+                        <span className="font-arabic font-medium">التنظيم:</span>
+                        <div className="mt-1 space-x-1 space-x-reverse">
+                          {visit.questionnaire.treatment.organization.map((org, index) => (
+                            <Badge key={index} variant="outline" className="font-arabic">
+                              {getOrganizationLabel(org)}
+                            </Badge>
+                          ))}
+                        </div>
                       </div>
-                    </div>
-                  )}
+                    )}
 
-                  {visit.questionnaire.treatment.sideEffects && (
+                  {visit.questionnaire?.treatment?.sideEffects && (
                     <div>
                       <span className="font-arabic font-medium">الآثار الجانبية:</span>
                       <p className="text-sm text-muted-foreground font-arabic">
@@ -293,14 +275,14 @@ export default function VisitDetailsPage() {
                     <div>
                       <span className="font-arabic font-medium">النظام الغذائي:</span>
                       <p className="text-muted-foreground font-arabic">
-                        {getLifestyleLabel(visit.questionnaire.lifestyle.dietRecommended)}
+                        {getLifestyleLabel(visit.questionnaire?.lifestyle?.dietRecommended)}
                       </p>
                     </div>
 
                     <div>
                       <span className="font-arabic font-medium">الرياضة:</span>
                       <p className="text-muted-foreground font-arabic">
-                        {getLifestyleLabel(visit.questionnaire.lifestyle.exercise)}
+                        {getLifestyleLabel(visit.questionnaire?.lifestyle?.exercise)}
                       </p>
                     </div>
                   </div>
@@ -309,14 +291,14 @@ export default function VisitDetailsPage() {
                     <div>
                       <span className="font-arabic font-medium">التدخين:</span>
                       <p className="text-muted-foreground font-arabic">
-                        {getLifestyleLabel(visit.questionnaire.lifestyle.smoking)}
+                        {getLifestyleLabel(visit.questionnaire?.lifestyle?.smoking)}
                       </p>
                     </div>
 
                     <div>
                       <span className="font-arabic font-medium">الكحول:</span>
                       <p className="text-muted-foreground font-arabic">
-                        {getLifestyleLabel(visit.questionnaire.lifestyle.alcohol)}
+                        {getLifestyleLabel(visit.questionnaire?.lifestyle?.alcohol)}
                       </p>
                     </div>
                   </div>
@@ -332,26 +314,32 @@ export default function VisitDetailsPage() {
                   </CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-4">
-                  <div>
-                    <span className="font-arabic font-medium">معرفة المرض:</span>
-                    <Badge variant="secondary" className="mr-2 font-arabic">
-                      {getEvaluationLabel(visit.questionnaire.evaluation.diseaseKnowledge)}
-                    </Badge>
-                  </div>
+                  {visit.questionnaire?.evaluation?.diseaseKnowledge && (
+                    <div>
+                      <span className="font-arabic font-medium">معرفة المرض:</span>
+                      <Badge variant="secondary" className="mr-2 font-arabic">
+                        {getEvaluationLabel(visit.questionnaire.evaluation.diseaseKnowledge)}
+                      </Badge>
+                    </div>
+                  )}
 
-                  <div>
-                    <span className="font-arabic font-medium">فهم العلاج:</span>
-                    <Badge variant="secondary" className="mr-2 font-arabic">
-                      {getEvaluationLabel(visit.questionnaire.evaluation.treatmentUnderstanding)}
-                    </Badge>
-                  </div>
+                  {visit.questionnaire?.evaluation?.treatmentUnderstanding && (
+                    <div>
+                      <span className="font-arabic font-medium">فهم العلاج:</span>
+                      <Badge variant="secondary" className="mr-2 font-arabic">
+                        {getEvaluationLabel(visit.questionnaire.evaluation.treatmentUnderstanding)}
+                      </Badge>
+                    </div>
+                  )}
 
-                  <div>
-                    <span className="font-arabic font-medium">الاستقلالية:</span>
-                    <Badge variant="secondary" className="mr-2 font-arabic">
-                      {getEvaluationLabel(visit.questionnaire.evaluation.selfManagement)}
-                    </Badge>
-                  </div>
+                  {visit.questionnaire?.evaluation?.selfManagement && (
+                    <div>
+                      <span className="font-arabic font-medium">الاستقلال:</span>
+                      <Badge variant="secondary" className="mr-2 font-arabic">
+                        {getEvaluationLabel(visit.questionnaire.evaluation.selfManagement)}
+                      </Badge>
+                    </div>
+                  )}
                 </CardContent>
               </Card>
             </div>
@@ -367,7 +355,7 @@ export default function VisitDetailsPage() {
                 </CardTitle>
               </CardHeader>
               <CardContent className="space-y-4">
-                {visit.questionnaire.pharmacistNotes && (
+                {visit.questionnaire?.pharmacistNotes && (
                   <div>
                     <span className="font-arabic font-medium">ملاحظات الصيدلي:</span>
                     <p className="mt-2 p-4 bg-muted rounded-lg text-sm font-arabic">

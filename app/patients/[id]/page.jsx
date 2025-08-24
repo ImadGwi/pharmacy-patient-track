@@ -15,48 +15,41 @@ export default function PatientProfilePage() {
   const params = useParams()
   const [patient, setPatient] = useState(null)
   const [loading, setLoading] = useState(true)
+  const [error, setError] = useState(null)
 
   useEffect(() => {
-    // Mock patient data
-    const mockPatient = {
-      id: params.id,
-      general: {
-        firstName: "أحمد",
-        lastName: "محمد علي",
-        birthDate: "1980-05-15",
-        phone: "0123456789",
-        primaryPhysician: "د. محمد حسن",
-        specialists: ["د. فاطمة أحمد - قلبية", "د. علي محمود - غدد صماء"],
-      },
-      medical: {
-        chronicConditions: ["السكري النوع الثاني", "ارتفاع ضغط الدم"],
-        allergies: ["البنسلين", "الأسبرين"],
-        familyHistory: "تاريخ عائلي للسكري وأمراض القلب",
-      },
-      visits: [
-        {
-          visitId: "V-001",
-          at: "2024-01-15T10:30:00Z",
-          doctorId: "D-001",
-          questionnaire: {
-            pharmacistNotes: "المريض يتابع العلاج بانتظام، لا توجد آثار جانبية",
-          },
-        },
-        {
-          visitId: "V-002",
-          at: "2024-01-08T14:15:00Z",
-          doctorId: "D-001",
-          questionnaire: {
-            pharmacistNotes: "تم تعديل جرعة الأنسولين حسب توصية الطبيب",
-          },
-        },
-      ],
+    async function fetchPatient() {
+      try {
+        console.log("[v0] Fetching patient:", params.id)
+        const controller = new AbortController()
+        const timeoutId = setTimeout(() => controller.abort(), 10000) // 10 second timeout
+
+        const response = await fetch(`/api/patients/${params.id}`, {
+          signal: controller.signal,
+        })
+        clearTimeout(timeoutId)
+
+        if (!response.ok) {
+          throw new Error("Patient not found")
+        }
+        const patientData = await response.json()
+        console.log("[v0] Patient fetched successfully:", patientData.id)
+        setPatient(patientData)
+      } catch (err) {
+        if (err.name === "AbortError") {
+          setError("Request timeout - please try again")
+        } else {
+          setError(err.message)
+        }
+        console.error("[v0] Error fetching patient:", err)
+      } finally {
+        setLoading(false)
+      }
     }
 
-    setTimeout(() => {
-      setPatient(mockPatient)
-      setLoading(false)
-    }, 1000)
+    if (params.id) {
+      fetchPatient()
+    }
   }, [params.id])
 
   if (loading) {
@@ -79,7 +72,7 @@ export default function PatientProfilePage() {
     )
   }
 
-  if (!patient) {
+  if (error || !patient) {
     return (
       <div className="flex min-h-screen bg-background" dir="rtl">
         <Sidebar />
@@ -87,7 +80,7 @@ export default function PatientProfilePage() {
           <Header title="ملف المريض" titleEn="Patient Profile" />
           <main className="p-6">
             <div className="text-center py-12">
-              <p className="text-muted-foreground font-arabic">المريض غير موجود</p>
+              <p className="text-muted-foreground font-arabic">{error || "المريض غير موجود"}</p>
             </div>
           </main>
         </div>
@@ -149,7 +142,7 @@ export default function PatientProfilePage() {
                     <span className="font-arabic">{patient.general.primaryPhysician}</span>
                   </div>
 
-                  {patient.general.specialists.length > 0 && (
+                  {patient.general.specialists && patient.general.specialists.length > 0 && (
                     <div>
                       <span className="font-arabic font-medium">الأطباء المختصون:</span>
                       <div className="mt-2 space-y-1">
@@ -173,32 +166,38 @@ export default function PatientProfilePage() {
                   </CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-4">
-                  <div>
-                    <span className="font-arabic font-medium">الأمراض المزمنة:</span>
-                    <div className="mt-2 space-y-1">
-                      {patient.medical.chronicConditions.map((condition, index) => (
-                        <Badge key={index} variant="outline" className="font-arabic">
-                          {condition}
-                        </Badge>
-                      ))}
+                  {patient.medical.chronicConditions && patient.medical.chronicConditions.length > 0 && (
+                    <div>
+                      <span className="font-arabic font-medium">الأمراض المزمنة:</span>
+                      <div className="mt-2 space-y-1">
+                        {patient.medical.chronicConditions.map((condition, index) => (
+                          <Badge key={index} variant="outline" className="font-arabic">
+                            {condition}
+                          </Badge>
+                        ))}
+                      </div>
                     </div>
-                  </div>
+                  )}
 
-                  <div>
-                    <span className="font-arabic font-medium">الحساسية:</span>
-                    <div className="mt-2 space-y-1">
-                      {patient.medical.allergies.map((allergy, index) => (
-                        <Badge key={index} variant="destructive" className="font-arabic">
-                          {allergy}
-                        </Badge>
-                      ))}
+                  {patient.medical.allergies && patient.medical.allergies.length > 0 && (
+                    <div>
+                      <span className="font-arabic font-medium">الحساسية:</span>
+                      <div className="mt-2 space-y-1">
+                        {patient.medical.allergies.map((allergy, index) => (
+                          <Badge key={index} variant="destructive" className="font-arabic">
+                            {allergy}
+                          </Badge>
+                        ))}
+                      </div>
                     </div>
-                  </div>
+                  )}
 
-                  <div>
-                    <span className="font-arabic font-medium">التاريخ العائلي:</span>
-                    <p className="mt-1 text-sm text-muted-foreground font-arabic">{patient.medical.familyHistory}</p>
-                  </div>
+                  {patient.medical.familyHistory && (
+                    <div>
+                      <span className="font-arabic font-medium">التاريخ العائلي:</span>
+                      <p className="mt-1 text-sm text-muted-foreground font-arabic">{patient.medical.familyHistory}</p>
+                    </div>
+                  )}
                 </CardContent>
               </Card>
             </div>
@@ -210,33 +209,33 @@ export default function PatientProfilePage() {
               <CardHeader>
                 <CardTitle className="flex items-center gap-2 font-arabic">
                   <FileText className="h-5 w-5" />
-                  تاريخ الزيارات ({patient.visits.length})
+                  تاريخ الزيارات ({patient.visits ? patient.visits.length : 0})
                 </CardTitle>
               </CardHeader>
               <CardContent>
                 <div className="space-y-4">
-                  {patient.visits.map((visit) => (
-                    <div key={visit.visitId} className="flex items-center justify-between p-4 border rounded-lg">
-                      <div className="space-y-1">
-                        <div className="flex items-center gap-2">
-                          <span className="font-medium">زيارة {visit.visitId}</span>
-                          <Badge variant="outline">{new Date(visit.at).toLocaleDateString("ar-SA")}</Badge>
+                  {patient.visits && patient.visits.length > 0 ? (
+                    patient.visits.map((visit) => (
+                      <div key={visit.visitId} className="flex items-center justify-between p-4 border rounded-lg">
+                        <div className="space-y-1">
+                          <div className="flex items-center gap-2">
+                            <span className="font-medium">زيارة {visit.visitId}</span>
+                            <Badge variant="outline">{new Date(visit.at).toLocaleDateString("ar-SA")}</Badge>
+                          </div>
+                          <p className="text-sm text-muted-foreground font-arabic">
+                            {visit.questionnaire?.pharmacistNotes || "لا توجد ملاحظات"}
+                          </p>
                         </div>
-                        <p className="text-sm text-muted-foreground font-arabic">
-                          {visit.questionnaire.pharmacistNotes}
-                        </p>
+
+                        <Link href={`/patients/${patient.id}/visits/${visit.visitId}`}>
+                          <Button variant="outline" size="sm">
+                            <Eye className="h-4 w-4 ml-2" />
+                            <span className="font-arabic">عرض</span>
+                          </Button>
+                        </Link>
                       </div>
-
-                      <Link href={`/patients/${patient.id}/visits/${visit.visitId}`}>
-                        <Button variant="outline" size="sm">
-                          <Eye className="h-4 w-4 ml-2" />
-                          <span className="font-arabic">عرض</span>
-                        </Button>
-                      </Link>
-                    </div>
-                  ))}
-
-                  {patient.visits.length === 0 && (
+                    ))
+                  ) : (
                     <div className="text-center py-8">
                       <p className="text-muted-foreground font-arabic">لا توجد زيارات سابقة</p>
                     </div>
