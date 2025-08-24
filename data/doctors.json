@@ -1,0 +1,10 @@
+[
+  {
+    "id": "D-001",
+    "username": "admin",
+    "passwordHash": "$2b$10$example.hash.here",
+    "role": "admin",
+    "active": true,
+    "createdAt": "2024-01-01T00:00:00Z"
+  }
+]
