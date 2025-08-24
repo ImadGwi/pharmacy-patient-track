@@ -121,6 +121,25 @@
   body {
     @apply bg-background text-foreground;
   }
+
+  /* Improved checkbox visibility in light mode */
+  [data-state="unchecked"] {
+    @apply border-2 border-muted-foreground/30 bg-background;
+  }
+
+  [data-state="checked"] {
+    @apply border-primary bg-primary text-primary-foreground;
+  }
+
+  /* Better form control styling */
+  .form-control {
+    @apply border border-input bg-background text-foreground;
+  }
+
+  /* Select trigger improvements */
+  [data-placeholder] {
+    @apply text-muted-foreground;
+  }
 }
 
 /* Added RTL support for Arabic text */

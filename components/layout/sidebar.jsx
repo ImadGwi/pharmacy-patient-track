@@ -44,13 +44,15 @@ export function Sidebar() {
         <div className="flex flex-col h-full">
           {/* Logo */}
           <div className="flex items-center justify-center p-6 border-b border-sidebar-border">
-            <Image
-              src="/images/tenes-logo.png"
-              alt="Tenes Pharmacy"
-              width={120}
-              height={80}
-              className="object-contain"
-            />
+            <div className="bg-white dark:bg-transparent rounded-lg p-2 dark:p-0">
+              <Image
+                src="/images/tenes-logo.png"
+                alt="Tenes Pharmacy"
+                width={120}
+                height={80}
+                className="object-contain dark:brightness-0 dark:invert"
+              />
+            </div>
           </div>
 
           {/* Navigation */}

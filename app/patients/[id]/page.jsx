@@ -9,10 +9,12 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Separator } from "@/components/ui/separator"
-import { User, Phone, Calendar, Stethoscope, FileText, Plus, Eye, AlertTriangle } from "lucide-react"
+import { User, Phone, Calendar, Stethoscope, FileText, Plus, Eye, AlertTriangle, Edit, Trash2 } from "lucide-react"
+import { useLanguage } from "@/components/providers/language-provider"
 
 export default function PatientProfilePage() {
   const params = useParams()
+  const { t, language } = useLanguage()
   const [patient, setPatient] = useState(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
@@ -52,12 +54,38 @@ export default function PatientProfilePage() {
     }
   }, [params.id])
 
+  const handleDeletePatient = async () => {
+    if (
+      !confirm(
+        language === "ar" ? "هل أنت متأكد من حذف هذا المريض؟" : "Êtes-vous sûr de vouloir supprimer ce patient ?",
+      )
+    ) {
+      return
+    }
+
+    try {
+      const response = await fetch(`/api/patients/${params.id}`, {
+        method: "DELETE",
+      })
+
+      if (!response.ok) {
+        throw new Error("Failed to delete patient")
+      }
+
+      alert(language === "ar" ? "تم حذف المريض بنجاح" : "Patient supprimé avec succès")
+      window.location.href = "/patients"
+    } catch (error) {
+      console.error("Error deleting patient:", error)
+      alert(language === "ar" ? "خطأ في حذف المريض" : "Erreur lors de la suppression du patient")
+    }
+  }
+
   if (loading) {
     return (
-      <div className="flex min-h-screen bg-background" dir="rtl">
+      <div className={`flex min-h-screen bg-background ${language === "ar" ? "dir-rtl" : ""}`}>
         <Sidebar />
         <div className="flex-1 md:mr-64">
-          <Header title="ملف المريض" titleEn="Patient Profile" />
+          <Header title={t("patientProfile")} />
           <main className="p-6">
             <div className="animate-pulse space-y-6">
               <div className="h-8 bg-muted rounded w-1/3"></div>
@@ -74,13 +102,15 @@ export default function PatientProfilePage() {
 
   if (error || !patient) {
     return (
-      <div className="flex min-h-screen bg-background" dir="rtl">
+      <div className={`flex min-h-screen bg-background ${language === "ar" ? "dir-rtl" : ""}`}>
         <Sidebar />
         <div className="flex-1 md:mr-64">
-          <Header title="ملف المريض" titleEn="Patient Profile" />
+          <Header title={t("patientProfile")} />
           <main className="p-6">
             <div className="text-center py-12">
-              <p className="text-muted-foreground font-arabic">{error || "المريض غير موجود"}</p>
+              <p className="text-muted-foreground">
+                {error || (language === "ar" ? "المريض غير موجود" : "Patient non trouvé")}
+              </p>
             </div>
           </main>
         </div>
@@ -89,65 +119,81 @@ export default function PatientProfilePage() {
   }
 
   return (
-    <div className="flex min-h-screen bg-background" dir="rtl">
+    <div className={`flex min-h-screen bg-background ${language === "ar" ? "dir-rtl" : ""}`}>
       <Sidebar />
 
       <div className="flex-1 md:mr-64">
-        <Header title="ملف المريض" titleEn="Patient Profile" />
+        <Header title={t("patientProfile")} />
 
         <main className="p-6">
           <div className="max-w-6xl mx-auto space-y-6">
             {/* Patient Header */}
             <div className="flex items-center justify-between">
               <div>
-                <h1 className="text-3xl font-bold font-arabic">
+                <h1 className="text-3xl font-bold">
                   {patient.general.firstName} {patient.general.lastName}
                 </h1>
-                <p className="text-muted-foreground">رقم المريض: {patient.id}</p>
+                <p className="text-muted-foreground">
+                  {language === "ar" ? "رقم المريض:" : "ID Patient:"} {patient.id}
+                </p>
               </div>
 
-              <Link href={`/patients/${patient.id}/visits/new`}>
-                <Button className="flex items-center gap-2">
-                  <Plus className="h-4 w-4" />
-                  <span className="font-arabic">زيارة جديدة</span>
+              <div className="flex gap-2">
+                <Link href={`/patients/${patient.id}/edit`}>
+                  <Button variant="outline" className="flex items-center gap-2 bg-transparent">
+                    <Edit className="h-4 w-4" />
+                    {t("editPatient")}
+                  </Button>
+                </Link>
+
+                <Button variant="destructive" onClick={handleDeletePatient} className="flex items-center gap-2">
+                  <Trash2 className="h-4 w-4" />
+                  {t("deletePatient")}
                 </Button>
-              </Link>
+
+                <Link href={`/patients/${patient.id}/visits/new`}>
+                  <Button className="flex items-center gap-2">
+                    <Plus className="h-4 w-4" />
+                    {t("newVisit")}
+                  </Button>
+                </Link>
+              </div>
             </div>
 
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
               {/* General Information */}
               <Card>
                 <CardHeader>
-                  <CardTitle className="flex items-center gap-2 font-arabic">
+                  <CardTitle className="flex items-center gap-2">
                     <User className="h-5 w-5" />
-                    المعلومات الشخصية
+                    {language === "ar" ? "المعلومات الشخصية" : "Informations personnelles"}
                   </CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-4">
                   <div className="flex items-center gap-3">
                     <Phone className="h-4 w-4 text-muted-foreground" />
-                    <span className="font-arabic">الهاتف:</span>
+                    <span>{t("phone")}:</span>
                     <span>{patient.general.phone}</span>
                   </div>
 
                   <div className="flex items-center gap-3">
                     <Calendar className="h-4 w-4 text-muted-foreground" />
-                    <span className="font-arabic">تاريخ الميلاد:</span>
+                    <span>{t("birthDate")}:</span>
                     <span>{patient.general.birthDate}</span>
                   </div>
 
                   <div className="flex items-center gap-3">
                     <Stethoscope className="h-4 w-4 text-muted-foreground" />
-                    <span className="font-arabic">الطبيب المعالج:</span>
-                    <span className="font-arabic">{patient.general.primaryPhysician}</span>
+                    <span>{t("primaryPhysician")}:</span>
+                    <span>{patient.general.primaryPhysician}</span>
                   </div>
 
                   {patient.general.specialists && patient.general.specialists.length > 0 && (
                     <div>
-                      <span className="font-arabic font-medium">الأطباء المختصون:</span>
+                      <span className="font-medium">{t("specialists")}:</span>
                       <div className="mt-2 space-y-1">
                         {patient.general.specialists.map((specialist, index) => (
-                          <Badge key={index} variant="secondary" className="font-arabic">
+                          <Badge key={index} variant="secondary">
                             {specialist}
                           </Badge>
                         ))}
@@ -160,18 +206,18 @@ export default function PatientProfilePage() {
               {/* Medical History */}
               <Card>
                 <CardHeader>
-                  <CardTitle className="flex items-center gap-2 font-arabic">
+                  <CardTitle className="flex items-center gap-2">
                     <AlertTriangle className="h-5 w-5" />
-                    التاريخ المرضي
+                    {language === "ar" ? "التاريخ المرضي" : "Antécédents médicaux"}
                   </CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-4">
                   {patient.medical.chronicConditions && patient.medical.chronicConditions.length > 0 && (
                     <div>
-                      <span className="font-arabic font-medium">الأمراض المزمنة:</span>
+                      <span className="font-medium">{t("chronicConditions")}:</span>
                       <div className="mt-2 space-y-1">
                         {patient.medical.chronicConditions.map((condition, index) => (
-                          <Badge key={index} variant="outline" className="font-arabic">
+                          <Badge key={index} variant="outline">
                             {condition}
                           </Badge>
                         ))}
@@ -181,10 +227,10 @@ export default function PatientProfilePage() {
 
                   {patient.medical.allergies && patient.medical.allergies.length > 0 && (
                     <div>
-                      <span className="font-arabic font-medium">الحساسية:</span>
+                      <span className="font-medium">{t("allergies")}:</span>
                       <div className="mt-2 space-y-1">
                         {patient.medical.allergies.map((allergy, index) => (
-                          <Badge key={index} variant="destructive" className="font-arabic">
+                          <Badge key={index} variant="destructive">
                             {allergy}
                           </Badge>
                         ))}
@@ -194,8 +240,8 @@ export default function PatientProfilePage() {
 
                   {patient.medical.familyHistory && (
                     <div>
-                      <span className="font-arabic font-medium">التاريخ العائلي:</span>
-                      <p className="mt-1 text-sm text-muted-foreground font-arabic">{patient.medical.familyHistory}</p>
+                      <span className="font-medium">{t("familyHistory")}:</span>
+                      <p className="mt-1 text-sm text-muted-foreground">{patient.medical.familyHistory}</p>
                     </div>
                   )}
                 </CardContent>
@@ -207,9 +253,10 @@ export default function PatientProfilePage() {
             {/* Visits History */}
             <Card>
               <CardHeader>
-                <CardTitle className="flex items-center gap-2 font-arabic">
+                <CardTitle className="flex items-center gap-2">
                   <FileText className="h-5 w-5" />
-                  تاريخ الزيارات ({patient.visits ? patient.visits.length : 0})
+                  {language === "ar" ? "تاريخ الزيارات" : "Historique des visites"} (
+                  {patient.visits ? patient.visits.length : 0})
                 </CardTitle>
               </CardHeader>
               <CardContent>
@@ -219,25 +266,34 @@ export default function PatientProfilePage() {
                       <div key={visit.visitId} className="flex items-center justify-between p-4 border rounded-lg">
                         <div className="space-y-1">
                           <div className="flex items-center gap-2">
-                            <span className="font-medium">زيارة {visit.visitId}</span>
-                            <Badge variant="outline">{new Date(visit.at).toLocaleDateString("ar-SA")}</Badge>
+                            <span className="font-medium">
+                              {language === "ar" ? "زيارة" : "Visite"} {visit.visitId}
+                            </span>
+                            <Badge variant="outline">
+                              {new Date(visit.at).toLocaleDateString(language === "ar" ? "ar-SA" : "fr-FR")}
+                            </Badge>
                           </div>
-                          <p className="text-sm text-muted-foreground font-arabic">
-                            {visit.questionnaire?.pharmacistNotes || "لا توجد ملاحظات"}
+                          <p className="text-sm text-muted-foreground">
+                            {visit.questionnaire?.pharmacistNotes ||
+                              (language === "ar" ? "لا توجد ملاحظات" : "Aucune note")}
                           </p>
                         </div>
 
-                        <Link href={`/patients/${patient.id}/visits/${visit.visitId}`}>
-                          <Button variant="outline" size="sm">
-                            <Eye className="h-4 w-4 ml-2" />
-                            <span className="font-arabic">عرض</span>
-                          </Button>
-                        </Link>
+                        <div className="flex gap-2">
+                          <Link href={`/patients/${patient.id}/visits/${visit.visitId}`}>
+                            <Button variant="outline" size="sm">
+                              <Eye className="h-4 w-4 mr-2" />
+                              {language === "ar" ? "عرض" : "Voir"}
+                            </Button>
+                          </Link>
+                        </div>
                       </div>
                     ))
                   ) : (
                     <div className="text-center py-8">
-                      <p className="text-muted-foreground font-arabic">لا توجد زيارات سابقة</p>
+                      <p className="text-muted-foreground">
+                        {language === "ar" ? "لا توجد زيارات سابقة" : "Aucune visite précédente"}
+                      </p>
                     </div>
                   )}
                 </div>
